@@ -29,7 +29,7 @@ public class WebSecurityConfig {
             .cors(cors -> {})  // Enable CORS with default values or configure as needed
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/url/**", "/api/scan/**", "/api/community/**").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 

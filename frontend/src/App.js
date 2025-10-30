@@ -1,19 +1,25 @@
-import React from 'react';
-import PhishSentinelLanding from './components/PhishSentinelLanding';
-import './App.css';
-import { Routes, Route } from 'react-router-dom'; // <-- ADDED
-import Dashboard from './components/Dashboard'; // <-- ADDED
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import PhishSentinelLanding from "./components/PhishSentinelLanding";
+import Dashboard from "./components/Dashboard";
+import RegisterForm from "./components/RegisterForm";
+import LoginForm from "./components/LoginForm";
+import "./App.css";
 
 function App() {
   return (
     <div className="App">
-      <Routes> {/* <-- ADDED */}
-        {/* Route for your landing page */}
-        <Route path="/" element={<PhishSentinelLanding />} /> {/* <-- CHANGED */}
-        
-        {/* Route for your new dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} /> {/* <-- ADDED */}
-      </Routes> {/* <-- ADDED */}
+      <Routes>
+        {/* 🌐 Landing Page */}
+        <Route path="/" element={<PhishSentinelLanding />} />
+
+        {/* 🧭 Dashboard Page */}
+        <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* 👤 Authentication Pages */}
+        <Route path="/register" element={<RegisterForm />} />
+        <Route path="/login" element={<LoginForm />} />
+      </Routes>
     </div>
   );
 }

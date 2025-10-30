@@ -22,3 +22,4 @@ Thumbs.db
 
 # Others
 *.env
+node_modules/
