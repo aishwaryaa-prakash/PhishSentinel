@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from "axios";
 
 export default function PhishSentinelLanding() {
   const [scrolled, setScrolled] = useState(false);
@@ -12,6 +13,11 @@ export default function PhishSentinelLanding() {
     firstName: '',
     lastName: ''
   });
+  const closeModals = () => {
+  setShowSignup(false);
+  setShowLogin(false);
+};
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,35 +68,59 @@ export default function PhishSentinelLanding() {
     }));
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    console.log('Login attempt:', formData);
-    // Here you would typically make an API call
-    alert('Login functionality would be implemented here!');
-  };
+  const handleLogin = async (e) => {
+  e.preventDefault();
 
-  const handleSignup = (e) => {
-    e.preventDefault();
-    console.log('Signup attempt:', formData);
-    // Here you would typically make an API call
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
-      return;
-    }
-    alert('Signup functionality would be implemented here!');
-  };
-
-  const closeModals = () => {
-    setShowLogin(false);
-    setShowSignup(false);
-    setFormData({
-      email: '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      lastName: ''
+  try {
+    const response = await axios.post("http://localhost:8080/api/auth/login", {
+      email: formData.email, // if your backend expects 'email'
+      password: formData.password,
     });
-  };
+
+    if (response.data.success) {
+      alert("Login successful!");
+      localStorage.setItem("token", response.data.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.data.user));
+      window.location.href = "/dashboard";
+    } else {
+      alert(response.data.message || "Invalid credentials!");
+    }
+  } catch (error) {
+    console.error("Login error:", error);
+    alert("Login failed. Please check your credentials.");
+  }
+};
+
+
+  const handleSignup = async (e) => {
+  e.preventDefault();
+
+  if (formData.password !== formData.confirmPassword) {
+    alert("Passwords do not match!");
+    return;
+  }
+
+  try {
+    const response = await axios.post("http://localhost:8080/api/auth/register", {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+    });
+
+    if (response.data.success) {
+      alert("Signup successful! Please login now.");
+      setShowSignup(false);
+      setShowLogin(true);
+    } else {
+      alert(response.data.message || "Signup failed!");
+    }
+  } catch (error) {
+    console.error("Signup error:", error);
+    alert("Something went wrong during signup.");
+  }
+};
+
 
   // Close modal when clicking outside
   useEffect(() => {

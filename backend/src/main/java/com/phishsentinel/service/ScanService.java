@@ -16,7 +16,8 @@ public class ScanService {
     private ScanRepository scanRepository;
 
     @Autowired
-    private MLHelper mlHelper;
+    private MLService mlService;
+
 
     // ✅ userId is now Long, not String
     public ScanResult saveScanResult(String url, Long userId, Double confidenceScore, Boolean isPhishing, String prediction) {
@@ -43,9 +44,10 @@ public class ScanService {
 
     // ✅ Match all method calls to Long userId
     public ScanResult scanUrl(String url, Long userId) {
-        String prediction = mlHelper.predictUrl(url);
-        Double confidence = mlHelper.getConfidenceScore(url);
-        Boolean isPhishing = !"Safe".equalsIgnoreCase(prediction);
-        return saveScanResult(url, userId, confidence, isPhishing, prediction);
-    }
+    String prediction = mlService.predict(url);
+    Double confidence = mlService.getConfidenceScore(url);
+    Boolean isPhishing = !"Safe".equalsIgnoreCase(prediction);
+    return saveScanResult(url, userId, confidence, isPhishing, prediction);
+}
+
 }

@@ -20,10 +20,10 @@ public class CommunityController {
     @Autowired
     private UserRepository userRepository;
 
-    // ✅ Get UserProfile by username
-    @GetMapping("/profile/{username}")
-    public ResponseEntity<ApiResponse<UserProfile>> getUserProfile(@PathVariable String username) {
-        User user = userRepository.findByUsername(username)
+    // ✅ Get UserProfile by email (instead of username)
+    @GetMapping("/profile/{email}")
+    public ResponseEntity<ApiResponse<UserProfile>> getUserProfile(@PathVariable String email) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         UserProfile profile = communityService.getUserProfile(user.getId());

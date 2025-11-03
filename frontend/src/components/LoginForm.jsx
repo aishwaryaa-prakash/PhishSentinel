@@ -1,38 +1,40 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       const response = await axios.post("http://localhost:8080/api/auth/login", {
-        username,
+        email: username,
         password,
       });
 
-      const apiResponse = response.data;
+      // backend likely returns { token, user }
+      const { token, user } = response.data;
 
-      if (apiResponse.success) {
-        // Save JWT token to localStorage
-        localStorage.setItem("token", apiResponse.data.token);
-        localStorage.setItem("user", JSON.stringify(apiResponse.data.user));
+      if (token && user) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
 
         setMessage("Login successful!");
-        console.log("Logged in user:", apiResponse.data.user);
+        console.log("Logged in user:", user);
 
-        // Redirect after success (e.g., to dashboard)
-        window.location.href = "/dashboard";
+        // ✅ redirect directly
+        navigate("/dashboard");
       } else {
-        setMessage(apiResponse.message || "Login failed");
+        setMessage("Invalid response from server");
       }
     } catch (error) {
       console.error("Error logging in:", error);
-      setMessage("Invalid username or password");
+      setMessage("Invalid email or password");
     }
   };
 
@@ -42,7 +44,7 @@ const LoginForm = () => {
       <form onSubmit={handleSubmit}>
         <input
           type="text"
-          placeholder="Username"
+          placeholder="Email"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required

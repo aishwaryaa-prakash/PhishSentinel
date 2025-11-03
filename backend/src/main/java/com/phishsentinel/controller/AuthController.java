@@ -34,11 +34,9 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    // REGISTER
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        if (userRepository.existsByUsername(registerRequest.getUsername())) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Username already taken"));
-        }
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Email already in use"));
         }
@@ -49,33 +47,44 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setRole("USER");
         user.setCreatedAt(new Date());
-        User savedUser = userRepository.save(user);
+        userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getUsername());
-        UserResponse userResponse = new UserResponse(savedUser.getId().toString(), savedUser.getUsername(), savedUser.getEmail(), savedUser.getRole());
+        String token = jwtUtil.generateToken(user.getEmail());
+        UserResponse userResponse = new UserResponse(user.getId().toString(), user.getUsername(), user.getEmail(), user.getRole());
         AuthResponse authResponse = new AuthResponse(token, userResponse);
 
         return ResponseEntity.ok(ApiResponse.success("Registration successful", authResponse));
     }
 
+    // LOGIN
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<?>> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+            );
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-            String token = jwtUtil.generateToken(loginRequest.getUsername());
-            Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
+            Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
             if (userOptional.isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("User not found"));
             }
+
             User user = userOptional.get();
-            UserResponse userResponse = new UserResponse(user.getId().toString(), user.getUsername(), user.getEmail(), user.getRole());
+            String token = jwtUtil.generateToken(user.getEmail());
+
+            UserResponse userResponse = new UserResponse(
+                    user.getId().toString(),
+                    user.getUsername(),
+                    user.getEmail(),
+                    user.getRole()
+            );
+
             AuthResponse authResponse = new AuthResponse(token, userResponse);
             return ResponseEntity.ok(ApiResponse.success("Login successful", authResponse));
+
         } catch (Exception ex) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid username or password"));
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid email or password"));
         }
     }
 }
