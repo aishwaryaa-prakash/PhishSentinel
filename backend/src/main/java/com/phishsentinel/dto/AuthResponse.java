@@ -5,6 +5,10 @@ public class AuthResponse {
     private UserResponse user;
 
     public AuthResponse() {}
+    public AuthResponse(String token) {
+        this.token = token;
+        this.user = null;
+    }
     public AuthResponse(String token, UserResponse user) {
         this.token = token;
         this.user = user;

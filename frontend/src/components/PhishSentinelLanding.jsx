@@ -6,6 +6,8 @@ export default function PhishSentinelLanding() {
   const [activeFeature, setActiveFeature] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [signupError, setSignupError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -14,9 +16,18 @@ export default function PhishSentinelLanding() {
     lastName: ''
   });
   const closeModals = () => {
-  setShowSignup(false);
-  setShowLogin(false);
-};
+    setShowSignup(false);
+    setShowLogin(false);
+    setLoginError('');
+    setSignupError('');
+    setFormData({
+      email: '',
+      password: '',
+      confirmPassword: '',
+      firstName: '',
+      lastName: ''
+    });
+  };
 
 
   useEffect(() => {
@@ -69,57 +80,155 @@ export default function PhishSentinelLanding() {
   };
 
   const handleLogin = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    setLoginError('');
 
-  try {
-    const response = await axios.post("http://localhost:8080/api/auth/login", {
-      email: formData.email, // if your backend expects 'email'
-      password: formData.password,
-    });
+    try {
+      console.log('Sending login request:', { email: formData.email, password: '***' });
+      
+      const response = await axios.post("http://localhost:8080/api/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-    if (response.data.success) {
-      alert("Login successful!");
-      localStorage.setItem("token", response.data.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.data.user));
-      window.location.href = "/dashboard";
-    } else {
-      alert(response.data.message || "Invalid credentials!");
+      console.log('Login response:', response.data);
+
+      // Check if response has token (backend returns AuthResponse with token and user)
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        if (response.data.user) {
+          localStorage.setItem("user", JSON.stringify(response.data.user));
+        }
+        setShowLogin(false);
+        // Reset form
+        setFormData({
+          email: '',
+          password: '',
+          confirmPassword: '',
+          firstName: '',
+          lastName: ''
+        });
+        // Use navigate instead of window.location for proper React Router navigation
+        window.location.href = "/dashboard";
+      } else {
+        setLoginError("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      console.error("Error response:", error.response);
+      console.error("Error response data:", error.response?.data);
+      
+      let errorMessage = "Login failed. Please check your credentials.";
+      
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      setLoginError(errorMessage);
     }
-  } catch (error) {
-    console.error("Login error:", error);
-    alert("Login failed. Please check your credentials.");
-  }
-};
+  };
 
 
   const handleSignup = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    setSignupError('');
 
-  if (formData.password !== formData.confirmPassword) {
-    alert("Passwords do not match!");
-    return;
-  }
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setSignupError("Passwords do not match!");
+      return;
+    }
 
-  try {
-    const response = await axios.post("http://localhost:8080/api/auth/register", {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-    });
+    // Validate password strength
+    if (formData.password.length < 8) {
+      setSignupError("Password must be at least 8 characters long");
+      return;
+    }
 
-    if (response.data.success) {
+    // Generate username from firstName + lastName (lowercase, no spaces)
+    const username = `${formData.firstName}${formData.lastName}`.toLowerCase().replace(/\s+/g, '');
+    
+    if (!username || username.length < 3) {
+      setSignupError("Please enter a valid first and last name");
+      return;
+    }
+
+    try {
+      console.log('Sending registration request:', { username, email: formData.email, password: '***' });
+      
+      const response = await axios.post("http://localhost:8080/api/auth/register", {
+        username: username,
+        email: formData.email,
+        password: formData.password,
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Registration successful:', response.data);
       alert("Signup successful! Please login now.");
       setShowSignup(false);
       setShowLogin(true);
-    } else {
-      alert(response.data.message || "Signup failed!");
+      // Reset form
+      setFormData({
+        email: '',
+        password: '',
+        confirmPassword: '',
+        firstName: '',
+        lastName: ''
+      });
+    } catch (error) {
+      console.error("Signup error:", error);
+      console.error("Error response:", error.response);
+      console.error("Error response data:", error.response?.data);
+      
+      let errorMessage = 'Something went wrong during signup';
+      
+      // Handle network errors (no response)
+      if (!error.response) {
+        if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
+          errorMessage = 'Cannot connect to server. Please make sure the backend is running.';
+        } else {
+          errorMessage = `Network error: ${error.message}`;
+        }
+      }
+      // Handle validation errors from backend
+      else if (error.response?.data) {
+        const data = error.response.data;
+        
+        // Handle string response
+        if (typeof data === 'string') {
+          errorMessage = data;
+        }
+        // Handle object with errors property (from GlobalExceptionHandler)
+        else if (data.errors && typeof data.errors === 'object') {
+          const errorMessages = Object.values(data.errors);
+          errorMessage = errorMessages.length > 0 
+            ? errorMessages.join(', ') 
+            : (data.message || errorMessage);
+        }
+        // Handle object with message property
+        else if (data.message) {
+          errorMessage = data.message;
+        }
+        // Handle array of errors
+        else if (Array.isArray(data)) {
+          errorMessage = data.map(e => e.message || e.defaultMessage || e).join(', ');
+        }
+      }
+      
+      setSignupError(errorMessage);
     }
-  } catch (error) {
-    console.error("Signup error:", error);
-    alert("Something went wrong during signup.");
-  }
-};
+  };
 
 
   // Close modal when clicking outside
@@ -219,6 +328,12 @@ export default function PhishSentinelLanding() {
                   </button>
                 </div>
                 
+                {loginError && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                    {loginError}
+                  </div>
+                )}
+                
                 <form onSubmit={handleLogin} className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -311,6 +426,12 @@ export default function PhishSentinelLanding() {
                     ×
                   </button>
                 </div>
+                
+                {signupError && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                    {signupError}
+                  </div>
+                )}
                 
                 <form onSubmit={handleSignup} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
